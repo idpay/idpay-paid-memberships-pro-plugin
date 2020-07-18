@@ -29,6 +29,11 @@ Thank you so much for using IDPay Payment Gateway.
 
 == Changelog ==
 
+= 1.1.0, July 18, 2020 =
+* Fix error handling in creating transactions.
+* Add IDPay logo to submit button.
+* Some other bug fixes.
+
 = 1.0.4, May 19, 2019 =
 * Solve problem with language packs.
 
