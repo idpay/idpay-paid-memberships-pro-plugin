@@ -262,8 +262,19 @@ function load_idpay_pmpro_class()
             }
 
             public static function pmpro_checkout_after_form(){
+                print sprintf(
+                    '<span class="idpay-pmpro-logo" style="font-size: 12px;padding: 5px 0;"><img src="%1$s" style="display: inline-block;vertical-align: middle;width: 70px;">%2$s</span>',
+                    plugins_url( 'assets/logo.svg', __FILE__ ), __( 'Pay with IDPay', 'idpay-paid-memberships-pro' )
+                );
+                print '<style>
+                    .idpay-pmpro-logo{
+                        margin: calc(-1em - 44px) 0 calc(1.5em + 44px) 0;
+                        display: block;
+                    }
+                </style>';
+
                 if( !empty($_GET['idpay_message']) ){
-                    echo '<div class="pmpro_error pmpro_message" style="text-align: center;">'. sanitize_text_field($_GET['idpay_message']) .'</div>';
+                    print '<div class="pmpro_error pmpro_message" style="text-align: center;">'. sanitize_text_field($_GET['idpay_message']) .'</div>';
                 }
             }
 
