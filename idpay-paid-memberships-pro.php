@@ -118,7 +118,10 @@ function load_idpay_pmpro_class()
                     __CLASS__,
                     'pmpro_checkout_after_form',
                 ]);
-
+                add_action('pmpro_invoice_bullets_bottom', [
+                    __CLASS__,
+                    'pmpro_invoice_bullets_bottom',
+                ]);
                 $version = get_option( 'idpay_pmpro_version', '1.0' );
                 if ( version_compare( $version, '1.1.0' ) < 0 ) {
                     activate();
@@ -275,6 +278,12 @@ function load_idpay_pmpro_class()
 
                 if( !empty($_GET['idpay_message']) ){
                     print '<div class="pmpro_error pmpro_message" style="text-align: center;">'. sanitize_text_field($_GET['idpay_message']) .'</div>';
+                }
+            }
+
+            public static function pmpro_invoice_bullets_bottom(){
+                if( !empty($_GET['idpay_message']) ){
+                    print '<div class="pmpro_success pmpro_message idpay-success-message" style="text-align: center;margin: 30px 0 0 0;">'. sanitize_text_field($_GET['idpay_message']) .'</div>';
                 }
             }
 
