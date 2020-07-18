@@ -25,11 +25,35 @@ function idpay_pmpro_load_textdomain()
     load_plugin_textdomain('idpay-paid-memberships-pro', FALSE, basename(dirname(__FILE__)) . '/languages');
 }
 
+function activate(){
+    global $wpdb;
+    $table_names = [
+        'pmpro_discount_codes',
+        'pmpro_discount_codes_levels',
+        'pmpro_discount_codes_uses',
+        'pmpro_memberships_categories',
+        'pmpro_memberships_pages',
+        'pmpro_memberships_users',
+        'pmpro_membership_levelmeta',
+        'pmpro_membership_levels',
+        'pmpro_membership_orders',
+    ];
+    foreach ($table_names as $table_name){
+        $table_name = $wpdb->prefix . $table_name;
+
+        if ( $wpdb->get_var( "show tables like '$table_name'" ) == $table_name ) {
+            $wpdb->query("ALTER TABLE $table_name CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
+        }
+    }
+    update_option( 'idpay_pmpro_version', '1.1.0' );
+}
+
 add_action('init', 'idpay_pmpro_load_textdomain');
 
 //load classes init method
 add_action('plugins_loaded', 'load_idpay_pmpro_class', 11);
 add_action('plugins_loaded', ['PMProGateway_IDPay', 'init'], 12);
+register_activation_hook( __FILE__, 'activate' );
 
 function load_idpay_pmpro_class()
 {
@@ -94,6 +118,11 @@ function load_idpay_pmpro_class()
                     __CLASS__,
                     'pmpro_checkout_after_form',
                 ]);
+
+                $version = get_option( 'idpay_pmpro_version', '1.0' );
+                if ( version_compare( $version, '1.1.0' ) < 0 ) {
+                    activate();
+                }
             }
 
             /**
