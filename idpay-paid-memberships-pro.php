@@ -3,14 +3,13 @@
  * Plugin Name: IDPay Paid Memberships Pro
  * Description: IDPay payment gateway for Paid Memberships Pro
  * Author: IDPay
- * Version: 1.0.4
+ * Version: 1.1.0
  * License: GPL v2.0.
  * Author URI: https://idpay.ir
  * Author Email: info@idpay.ir
  * Text Domain: idpay-paid-memberships-pro
  * Domain Path: /languages/
  */
-
 
 if (!defined('ABSPATH')) {
     exit;
@@ -26,18 +25,41 @@ function idpay_pmpro_load_textdomain()
     load_plugin_textdomain('idpay-paid-memberships-pro', FALSE, basename(dirname(__FILE__)) . '/languages');
 }
 
+function activate(){
+    global $wpdb;
+    $table_names = [
+        'pmpro_discount_codes',
+        'pmpro_discount_codes_levels',
+        'pmpro_discount_codes_uses',
+        'pmpro_memberships_categories',
+        'pmpro_memberships_pages',
+        'pmpro_memberships_users',
+        'pmpro_membership_levelmeta',
+        'pmpro_membership_levels',
+        'pmpro_membership_orders',
+    ];
+    foreach ($table_names as $table_name){
+        $table_name = $wpdb->prefix . $table_name;
+
+        if ( $wpdb->get_var( "show tables like '$table_name'" ) == $table_name ) {
+            $wpdb->query("ALTER TABLE $table_name CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
+        }
+    }
+    update_option( 'idpay_pmpro_version', '1.1.0' );
+}
+
 add_action('init', 'idpay_pmpro_load_textdomain');
 
 //load classes init method
 add_action('plugins_loaded', 'load_idpay_pmpro_class', 11);
 add_action('plugins_loaded', ['PMProGateway_IDPay', 'init'], 12);
+register_activation_hook( __FILE__, 'activate' );
 
 function load_idpay_pmpro_class()
 {
     if (class_exists('PMProGateway')) {
         class PMProGateway_IDPay extends PMProGateway
         {
-
             public function __construct($gateway = NULL)
             {
                 $this->gateway = $gateway;
@@ -49,23 +71,23 @@ function load_idpay_pmpro_class()
             {
                 //make sure IDPay is a gateway option
                 add_filter('pmpro_gateways', [
-                    'PMProGateway_IDPay',
+                    __CLASS__,
                     'pmpro_gateways',
                 ]);
 
                 //add fields to payment settings
                 add_filter('pmpro_payment_options', [
-                    'PMProGateway_IDPay',
+                    __CLASS__,
                     'pmpro_payment_options',
                 ]);
                 add_filter('pmpro_payment_option_fields', [
-                    'PMProGateway_IDPay',
+                    __CLASS__,
                     'pmpro_payment_option_fields',
                 ], 10, 2);
 
                 // Add some currencies
                 add_filter('pmpro_currencies', [
-                    'PMProGateway_IDPay',
+                    __CLASS__,
                     'pmpro_currencies',
                 ]);
 
@@ -73,25 +95,37 @@ function load_idpay_pmpro_class()
                 $gateway = pmpro_getOption('gateway');
                 if ($gateway == 'idpay') {
                     add_filter('pmpro_checkout_before_change_membership_level', [
-                        'PMProGateway_IDPay',
+                        __CLASS__,
                         'pmpro_checkout_before_change_membership_level',
                     ], 10, 2);
                     add_filter('pmpro_include_billing_address_fields', '__return_false');
                     add_filter('pmpro_include_payment_information_fields', '__return_false');
                     add_filter('pmpro_required_billing_fields', [
-                        'PMProGateway_IDPay',
+                        __CLASS__,
                         'pmpro_required_billing_fields',
                     ]);
                 }
 
                 add_action('wp_ajax_nopriv_idpay-ins', [
-                    'PMProGateway_IDPay',
+                    __CLASS__,
                     'pmpro_wp_ajax_idpay_ins',
                 ]);
                 add_action('wp_ajax_idpay-ins', [
-                    'PMProGateway_IDPay',
+                    __CLASS__,
                     'pmpro_wp_ajax_idpay_ins',
                 ]);
+                add_action('pmpro_checkout_after_form', [
+                    __CLASS__,
+                    'pmpro_checkout_after_form',
+                ]);
+                add_action('pmpro_invoice_bullets_bottom', [
+                    __CLASS__,
+                    'pmpro_invoice_bullets_bottom',
+                ]);
+                $version = get_option( 'idpay_pmpro_version', '1.0' );
+                if ( version_compare( $version, '1.1.0' ) < 0 ) {
+                    activate();
+                }
             }
 
             /**
@@ -203,7 +237,8 @@ function load_idpay_pmpro_class()
                     <?php endif; ?>
                 >
                     <td colspan="2">
-                        <?php _e('IDPay Configuration', 'idpay-paid-memberships-pro'); ?>
+                        <hr>
+                        <h3><?php _e('IDPay Configuration', 'idpay-paid-memberships-pro'); ?></h3>
                     </td>
                 </tr>
                 <tr class="gateway gateway_idpay"
@@ -212,10 +247,8 @@ function load_idpay_pmpro_class()
                     <?php endif; ?>
                 >
                     <th scope="row" valign="top">
-                        <label for="idpay_api_key"><?php _e('API Key', 'idpay-paid-memberships-pro'); ?>
-                            :</label>
+                        <label for="idpay_api_key"><?php _e('API Key', 'idpay-paid-memberships-pro'); ?> :</label>
                     </th>
-
                     <td>
                         <input type="text" id="idpay_api_key"
                                name="idpay_api_key" size="60"
@@ -223,9 +256,35 @@ function load_idpay_pmpro_class()
                         />
                     </td>
                 </tr>
-
+                <script>
+                    setTimeout(function(){
+                        pmpro_changeGateway(jQuery('#gateway').val())
+                    }, 100);
+                </script>
                 <?php
+            }
 
+            public static function pmpro_checkout_after_form(){
+                print sprintf(
+                    '<span class="idpay-pmpro-logo" style="font-size: 12px;padding: 5px 0;"><img src="%1$s" style="display: inline-block;vertical-align: middle;width: 70px;">%2$s</span>',
+                    plugins_url( 'assets/logo.svg', __FILE__ ), __( 'Pay with IDPay', 'idpay-paid-memberships-pro' )
+                );
+                print '<style>
+                    .idpay-pmpro-logo{
+                        margin: calc(-1em - 44px) 0 calc(1.5em + 44px) 0;
+                        display: block;
+                    }
+                </style>';
+
+                if( !empty($_GET['idpay_message']) ){
+                    print '<div class="pmpro_error pmpro_message" style="text-align: center;">'. sanitize_text_field($_GET['idpay_message']) .'</div>';
+                }
+            }
+
+            public static function pmpro_invoice_bullets_bottom(){
+                if( !empty($_GET['idpay_message']) ){
+                    print '<div class="pmpro_success pmpro_message idpay-success-message" style="text-align: center;margin: 30px 0 0 0;">'. sanitize_text_field($_GET['idpay_message']) .'</div>';
+                }
             }
 
             /**
@@ -235,7 +294,6 @@ function load_idpay_pmpro_class()
              */
             public static function pmpro_checkout_before_change_membership_level($user_id, $morder)
             {
-
                 global $wpdb, $discount_code_id;
 
                 //if no order, no need to pay
@@ -251,7 +309,6 @@ function load_idpay_pmpro_class()
                     $wpdb->query("INSERT INTO $wpdb->pmpro_discount_codes_uses (code_id, user_id, order_id, timestamp) VALUES('" . $discount_code_id . "', '" . $user_id . "', '" . $morder->id . "', now())");
                 }
 
-
                 $gtw_env = pmpro_getOption('gateway_environment');
                 $api_key = pmpro_getOption('idpay_api_key');
 
@@ -264,100 +321,94 @@ function load_idpay_pmpro_class()
                 $order_id = $morder->code;
                 $callback = admin_url('admin-ajax.php') . '?action=idpay-ins&oid=' . $order_id;
 
-
                 global $pmpro_currency;
-
                 $amount = intval($morder->subtotal);
                 if ($pmpro_currency == 'IRT') {
                     $amount *= 10;
                 }
 
-
                 $data = [
-                    'order_id' => $order_id,
-                    'amount' => $amount,
-                    'name' => '',
-                    'phone' => '',
-                    'mail' => '',
-                    'desc' => '',
-                    'callback' => $callback,
+                    'order_id'  => $order_id,
+                    'amount'    => $amount,
+                    'name'      => (!empty( $morder->FirstName ) ? $morder->FirstName : '') . !empty( $morder->LastName ) ? $morder->LastName : '',
+                    'phone'     => '',
+                    'mail'      => !empty( $morder->Email ) ? $morder->Email : '',
+                    'desc'      => '',
+                    'callback'  => $callback,
                 ];
-
                 $headers = [
                     'Content-Type' => 'application/json',
                     'X-API-KEY' => $api_key,
                     'X-SANDBOX' => $sandbox,
                 ];
-
                 $args = [
                     'body' => json_encode($data),
                     'headers' => $headers,
                     'timeout' => 30,
                 ];
-
                 $response = self::call_gateway_endpoint('https://api.idpay.ir/v1.1/payment', $args);
                 if (is_wp_error($response)) {
-                    $note = $response->get_error_message();
-                    wp_die($note);
+                    $note           = sprintf(__('An Error accrued: %s', 'idpay-paid-memberships-pro'), $response->get_error_message() );
+                    $morder->status = 'error';
+                    $morder->notes  = $note;
+                    $morder->saveOrder();
+
+                    $redirect = pmpro_url('checkout', '?level=' . $morder->membership_level->id . '&idpay_message='. $note);
+                    wp_redirect($redirect);
                     exit;
                 }
 
                 $http_status = wp_remote_retrieve_response_code($response);
-                $result = wp_remote_retrieve_body($response);
-                $result = json_decode($result);
-
+                $result      = wp_remote_retrieve_body($response);
+                $result      = json_decode($result);
 
                 if ($http_status == 201) {
                     $morder->status = 'pending';
-
-                    $note = sprintf(__('An pending occurred while creating a transaction. pendding status: %s', 'idpay-paid-memberships-pro'), $http_status);
-
-                    $morder->notes = $note;
-
+                    $morder->notes  = sprintf(__('An pending occurred while creating a transaction. pendding status: %s', 'idpay-paid-memberships-pro'), $http_status);
                     $morder->saveOrder();
 
                     wp_redirect($result->link);
                     exit;
                 } else {
-                    $note = sprintf(__('An error occurred while creating a transaction. error status: %s, error code: %s, error message: %s', 'idpay-paid-memberships-pro'), $http_status, $result->error_code, $result->error_message);
                     $morder->status = 'error';
-                    $morder->notes = $note;
+                    $note           = sprintf(__('An error occurred while creating a transaction. error status: %s, error code: %s, error message: %s', 'idpay-paid-memberships-pro'), $http_status, $result->error_code, $result->error_message);
+                    $morder->notes  = $note;
                     $morder->saveOrder();
-                    wp_die($note);
+
+                    $redirect = pmpro_url('checkout', '?level=' . $morder->membership_level->id . '&idpay_message='. $note );
+                    wp_redirect($redirect);
                     exit;
                 }
             }
 
             public static function pmpro_wp_ajax_idpay_ins()
             {
-                if (!isset($_GET['oid']) || is_null($_GET['oid'])) {
-                    die(__('The oid parameter is not set.', 'idpay-paid-memberships-pro'));
+                if (!isset($_GET['oid']) || empty($_GET['oid'])) {
+                    wp_die(__('The oid parameter is not set.', 'idpay-paid-memberships-pro'));
                 }
 
-                $oid = $_GET['oid'];
-
+                $oid    = sanitize_text_field($_GET['oid']);
                 $morder = NULL;
                 try {
                     $morder = new MemberOrder($oid);
                     $morder->getMembershipLevel();
-                    $morder->getUser();
                 } catch (Exception $exception) {
-                    die(__('The oid parameter is not correct.', 'idpay-paid-memberships-pro'));
+                    wp_die(__('The oid parameter is not correct.', 'idpay-paid-memberships-pro'));
                 }
 
                 $current_user_id = get_current_user_id();
-
                 if ($current_user_id !== intval($morder->user_id)) {
-                    die(__('This order does not belong to you.', 'idpay-paid-memberships-pro'));
+                    wp_die(__('This order does not belong to you.', 'idpay-paid-memberships-pro'));
                 }
 
+                $status     = sanitize_text_field( $_POST['status'] );
+                $track_id   = sanitize_text_field( $_POST['track_id'] );
+                $id         = sanitize_text_field( $_POST['id'] );
+                $order_id   = sanitize_text_field( $_POST['order_id'] );
 
-                $status = sanitize_text_field($_POST['status']);
-                $track_id = sanitize_text_field($_POST['track_id']);
-                $id = sanitize_text_field($_POST['id']);
-                $order_id = sanitize_text_field($_POST['order_id']);
-                $amount = sanitize_text_field($_POST['amount']);
-
+                if ($order_id != $oid) {
+                    wp_die( __('The oid parameter is not correct.', 'idpay-paid-memberships-pro') );
+                }
 
                 if ($status == 10) {
                     $gtw_env = pmpro_getOption('gateway_environment');
@@ -373,85 +424,83 @@ function load_idpay_pmpro_class()
                         'id' => $id,
                         'order_id' => $order_id,
                     ];
-
                     $headers = [
                         'Content-Type' => 'application/json',
                         'X-API-KEY' => $api_key,
                         'X-SANDBOX' => $sandbox,
                     ];
-
                     $args = [
                         'body' => json_encode($data),
                         'headers' => $headers,
                         'timeout' => 30,
                     ];
-
                     $response = self::call_gateway_endpoint('https://api.idpay.ir/v1.1/payment/verify', $args);
-                    if (is_wp_error($response)) {
-                        $note = $response->get_error_message();
-                        wp_die($note);
+                    if ( is_wp_error($response) ) {
+                        $note           = sprintf(__('An Error accrued: %s', 'idpay-paid-memberships-pro'), $response->get_error_message() );
+                        $morder->status = 'error';
+                        $morder->notes  = $note;
+                        $morder->saveOrder();
+
+                        $redirect = pmpro_url('checkout', '?level=' . $morder->membership_level->id . '&idpay_message='. $note );
+                        wp_redirect($redirect);
                         exit;
                     }
 
                     $http_status = wp_remote_retrieve_response_code($response);
-                    $result = wp_remote_retrieve_body($response);
-                    $result = json_decode($result);
-
+                    $result      = wp_remote_retrieve_body($response);
+                    $result      = json_decode($result);
 
                     if ($http_status == 200) {
-                        if ($result->status >= 100) {
-                            if (self::do_level_up($morder, $id)) {
+                        $note           = self::getStatus($result->status);
+                        $note           = sprintf( $note . __(" (status code: %s), track id: %s, order id: %s", "idpay-paid-memberships-pro"), $result->track_id, $order_id );
+                        $morder->notes  = $note;
 
-                                //doubel spanding
-                                if ($result->order_id != $oid) {
-                                    $note=self::getStatus($result->status);
-                                    $note = sprintf(__($note.' track_id: %s, status: %s, card_no: %s', 'idpay-paid-memberships-pro'), $result->track_id, $result->status, $result->payment->card_no);
-                                    $morder->notes = $note;
-                                    $morder->status = 'erorr';
-                                    $morder->saveOrder();
-
-                                    wp_die($note);
-                                    exit;
-                                }
-
-                                $note=self::getStatus($result->status);
-                                $note = sprintf(__($note.'. track_id: %s, status: %s, card_no: %s,hashed_card_no: %s', 'idpay-paid-memberships-pro'), $result->track_id, $result->status, $result->payment->card_no, $result->payment->hashed_card_no);
-                                $morder->notes = $note;
-                                $morder->status = 'success';
+                        if ($result->status == 100) {
+                            if ( self::do_level_up( $morder, $id ) ) {
+                                $note           = sprintf( __("Your payment is completed. track id: %s, order id: %s", "idpay-paid-memberships-pro"), $result->track_id, $order_id );
+                                $morder->notes  = $note;
                                 $morder->saveOrder();
-                                $redirect = pmpro_url('confirmation', '?level=' . $morder->membership_level->id);
 
+                                $redirect = pmpro_url('confirmation', '?level=' . $morder->membership_level->id . '&idpay_message='. $note );
                                 wp_redirect($redirect);
                                 exit;
                             } else {
-                                $note=self::getStatus($result->status);
-                                $note = sprintf(__($note.'. track_id: %s, status: %s, card_no: %s', 'idpay-paid-memberships-pro'), $result->track_id, $result->status, $result->payment->card_no);
-                                $morder->notes = $note;
-                                $morder->status = 'cancelled';
+                                $note           = sprintf( __("An Error accrued doing level up. track id: %s, order id: %s", "idpay-paid-memberships-pro"), $result->track_id, $order_id );
+                                $morder->notes  = $note;
+                                $morder->status = 'error';
                                 $morder->saveOrder();
 
-                                wp_die($note);
+                                $redirect = pmpro_url('checkout', '?level=' . $morder->membership_level->id . '&idpay_message='. $note );
+                                wp_redirect($redirect);
                                 exit;
                             }
-                        }
+                        } else {
+                            $morder->status = 'error';
+                            $morder->saveOrder();
 
+                            $redirect = pmpro_url('checkout', '?level=' . $morder->membership_level->id . '&idpay_message='. $note );
+                            wp_redirect($redirect);
+                            exit;
+                        }
                     } else {
-                        $note=self::getStatus($result->error_code);
-                        $note = sprintf(__($note.'. error status: %s, error code: %s, error message: %s', 'idpay-paid-memberships-pro'), $http_status, $result->error_code, $result->error_message);
+                        $morder->notes  = sprintf( $result->error_message . __('. error code: %s', "idpay-paid-memberships-pro") . "\nposted data: %s", $result->error_code, print_r($result, true) );
+                        $note           = sprintf( $result->error_message . __('. error code: %s', 'idpay-paid-memberships-pro'), $result->error_code );
                         $morder->status = 'error';
-                        $morder->notes = $note;
                         $morder->saveOrder();
-                        wp_die($note);
+
+                        $redirect = pmpro_url('checkout', '?level=' . $morder->membership_level->id . '&idpay_message='. $note );
+                        wp_redirect($redirect);
                         exit;
                     }
                 } else {
-                    $note=self::getStatus($status);
-
-                    $note = sprintf(__($note.'. track_id: %s, status: %s', 'idpay-paid-memberships-pro'), $track_id, $status);
-                    $morder->notes = $note;
-                    $morder->status = 'cancelled';
+                    $note           = self::getStatus($status);
+                    $note           = sprintf( $note . __(' (status code: %s), track id: %s, order id: %s', 'idpay-paid-memberships-pro'), $status, $track_id, $order_id );
+                    $morder->notes  = $note;
+                    $morder->status = $status == 7 ? 'cancelled' : 'error';
                     $morder->saveOrder();
-                    wp_die($note);
+
+                    $redirect = pmpro_url('checkout', '?level=' . $morder->membership_level->id . '&idpay_message='. $note );
+                    wp_redirect($redirect);
                     exit;
                 }
             }
@@ -484,18 +533,18 @@ function load_idpay_pmpro_class()
 
                 //custom level to change user to
                 $custom_level = [
-                    'user_id' => $morder->user_id,
-                    'membership_id' => $morder->membership_level->id,
-                    'code_id' => $discount_code_id,
-                    'initial_payment' => $morder->membership_level->initial_payment,
-                    'billing_amount' => $morder->membership_level->billing_amount,
-                    'cycle_number' => $morder->membership_level->cycle_number,
-                    'cycle_period' => $morder->membership_level->cycle_period,
-                    'billing_limit' => $morder->membership_level->billing_limit,
-                    'trial_amount' => $morder->membership_level->trial_amount,
-                    'trial_limit' => $morder->membership_level->trial_limit,
-                    'startdate' => $startdate,
-                    'enddate' => $enddate,
+                    'user_id'           => $morder->user_id,
+                    'membership_id'     => $morder->membership_level->id,
+                    'code_id'           => $discount_code_id,
+                    'initial_payment'   => $morder->membership_level->initial_payment,
+                    'billing_amount'    => $morder->membership_level->billing_amount,
+                    'cycle_number'      => $morder->membership_level->cycle_number,
+                    'cycle_period'      => $morder->membership_level->cycle_period,
+                    'billing_limit'     => $morder->membership_level->billing_limit,
+                    'trial_amount'      => $morder->membership_level->trial_amount,
+                    'trial_limit'       => $morder->membership_level->trial_limit,
+                    'startdate'         => $startdate,
+                    'enddate'           => $enddate,
                 ];
 
                 global $pmpro_error;
@@ -519,14 +568,14 @@ function load_idpay_pmpro_class()
                     //save first and last name fields
                     if (!empty($_POST['first_name'])) {
                         $old_firstname = get_user_meta($morder->user_id, 'first_name', TRUE);
-                        if (!empty($old_firstname)) {
-                            update_user_meta($morder->user_id, 'first_name', $_POST['first_name']);
+                        if (!empty($old_firstname)) { //@todo: if not empty??? why
+                            update_user_meta($morder->user_id, 'first_name', sanitize_text_field($_POST['first_name']));
                         }
                     }
                     if (!empty($_POST['last_name'])) {
                         $old_lastname = get_user_meta($morder->user_id, 'last_name', TRUE);
-                        if (!empty($old_lastname)) {
-                            update_user_meta($morder->user_id, 'last_name', $_POST['last_name']);
+                        if (!empty($old_lastname)) { //@todo: if not empty??? why
+                            update_user_meta($morder->user_id, 'last_name', sanitize_text_field($_POST['last_name']));
                         }
                     }
 
@@ -635,15 +684,11 @@ function load_idpay_pmpro_class()
                     case 101:
                         return 'پرداخت قبلا تایید شده است';
                         break;
-
                     case 200:
                         return 'به دریافت کننده واریز شد';
                         break;
-
                 }
-
             }
-
         }
     }
 }
