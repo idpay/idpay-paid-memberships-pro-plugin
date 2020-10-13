@@ -3,7 +3,7 @@
  * Plugin Name: IDPay Paid Memberships Pro
  * Description: IDPay payment gateway for Paid Memberships Pro
  * Author: IDPay
- * Version: 1.1.0
+ * Version: 1.1.1
  * License: GPL v2.0.
  * Author URI: https://idpay.ir
  * Author Email: info@idpay.ir
@@ -45,7 +45,7 @@ function activate(){
             $wpdb->query("ALTER TABLE $table_name CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
         }
     }
-    update_option( 'idpay_pmpro_version', '1.1.0' );
+    update_option( 'idpay_pmpro_version', '1.1.1' );
 }
 
 add_action('init', 'idpay_pmpro_load_textdomain');
@@ -384,7 +384,9 @@ function load_idpay_pmpro_class()
             public static function pmpro_wp_ajax_idpay_ins()
             {
                 if (!isset($_GET['oid']) || empty($_GET['oid'])) {
-                    wp_die(__('The oid parameter is not set.', 'idpay-paid-memberships-pro'));
+                    $redirect = pmpro_url('checkout', '?idpay_message='. __('The oid parameter is not set.', 'idpay-paid-memberships-pro') );
+                    wp_redirect($redirect);
+                    exit;
                 }
 
                 $oid    = sanitize_text_field($_GET['oid']);
@@ -393,21 +395,20 @@ function load_idpay_pmpro_class()
                     $morder = new MemberOrder($oid);
                     $morder->getMembershipLevel();
                 } catch (Exception $exception) {
-                    wp_die(__('The oid parameter is not correct.', 'idpay-paid-memberships-pro'));
+                    $redirect = pmpro_url('checkout', '?idpay_message='. __('The oid parameter is not correct.', 'idpay-paid-memberships-pro') );
+                    wp_redirect($redirect);
+                    exit;
                 }
 
-                $current_user_id = get_current_user_id();
-                if ($current_user_id !== intval($morder->user_id)) {
-                    wp_die(__('This order does not belong to you.', 'idpay-paid-memberships-pro'));
-                }
-
-                $status     = sanitize_text_field( $_POST['status'] );
-                $track_id   = sanitize_text_field( $_POST['track_id'] );
-                $id         = sanitize_text_field( $_POST['id'] );
-                $order_id   = sanitize_text_field( $_POST['order_id'] );
+                $status    = !empty($_POST['status'])  ? sanitize_text_field($_POST['status'])   : (!empty($_GET['status'])  ? sanitize_text_field($_GET['status'])   : NULL);
+                $track_id  = !empty($_POST['track_id'])? sanitize_text_field($_POST['track_id']) : (!empty($_GET['track_id'])? sanitize_text_field($_GET['track_id']) : NULL);
+                $id        = !empty($_POST['id'])      ? sanitize_text_field($_POST['id'])       : (!empty($_GET['id'])      ? sanitize_text_field($_GET['id'])       : NULL);
+                $order_id  = !empty($_POST['order_id'])? sanitize_text_field($_POST['order_id']) : (!empty($_GET['order_id'])? sanitize_text_field($_GET['order_id']) : NULL);
 
                 if ($order_id != $oid) {
-                    wp_die( __('The oid parameter is not correct.', 'idpay-paid-memberships-pro') );
+                    $redirect = pmpro_url('checkout', '?level=' . $morder->membership_level->id . '&idpay_message='. __('The oid parameter is not correct.', 'idpay-paid-memberships-pro') );
+                    wp_redirect($redirect);
+                    exit;
                 }
 
                 if ($status == 10) {
@@ -458,7 +459,7 @@ function load_idpay_pmpro_class()
                         if ($result->status == 100) {
                             if ( self::do_level_up( $morder, $id ) ) {
                                 $note           = sprintf( __("Your payment is completed. track id: %s, order id: %s", "idpay-paid-memberships-pro"), $result->track_id, $order_id );
-                                $morder->notes  = $note;
+                                $morder->notes  = $note . "<br>data: " . print_r($result, true);
                                 $morder->saveOrder();
 
                                 $redirect = pmpro_url('confirmation', '?level=' . $morder->membership_level->id . '&idpay_message='. $note );
