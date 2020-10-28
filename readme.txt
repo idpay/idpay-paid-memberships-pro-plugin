@@ -1,7 +1,7 @@
 === IDPay Payment Gateway for Paid Memberships Pro ===
 Contributors: imikiani, meysamrazmi, vispa
 Tags: IDPay, gateway, paid memberships pro, memberships, restrict content
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 Tested up to: 5.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -28,6 +28,9 @@ Also there is a complete documentation [here](https://blog.idpay.ir/helps/168) w
 Thank you so much for using IDPay Payment Gateway.
 
 == Changelog ==
+
+= 1.1.1, October 13, 2020 =
+* check GET parameters if POST was empty in relation with IDPay webservices new update.
 
 = 1.1.0, July 18, 2020 =
 * Fix error handling in creating transactions.
