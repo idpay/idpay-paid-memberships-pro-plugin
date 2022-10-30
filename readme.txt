@@ -1,8 +1,8 @@
 === IDPay Payment Gateway for Paid Memberships Pro ===
-Contributors: imikiani, meysamrazmi, vispa
+Contributors: imikiani, meysamrazmi, vispa,MimDeveloper.Tv (Mohammad-Malek)
 Tags: IDPay, gateway, paid memberships pro, memberships, restrict content
-Stable tag: 1.1.1
-Tested up to: 5.2
+Stable tag: 1.2.0
+Tested up to: 6.0.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
@@ -28,6 +28,12 @@ Also there is a complete documentation [here](https://blog.idpay.ir/helps/168) w
 Thank you so much for using IDPay Payment Gateway.
 
 == Changelog ==
+
+= 1.2.0, June 18, 2022 =
+* First Official Release
+* Tested Up With Wordpress 6.0 And Paid Memberships Pro Plugin 2.9.5
+* Check Double Spending Correct
+* Check Does Not Xss Attack Correct
 
 = 1.1.1, October 13, 2020 =
 * check GET parameters if POST was empty in relation with IDPay webservices new update.

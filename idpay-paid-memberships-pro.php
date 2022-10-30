@@ -3,7 +3,7 @@
  * Plugin Name: IDPay Paid Memberships Pro
  * Description: IDPay payment gateway for Paid Memberships Pro
  * Author: IDPay
- * Version: 1.1.1
+ * Version: 1.2.0
  * License: GPL v2.0.
  * Author URI: https://idpay.ir
  * Author Email: info@idpay.ir
@@ -45,7 +45,7 @@ function activate(){
             $wpdb->query("ALTER TABLE $table_name CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;");
         }
     }
-    update_option( 'idpay_pmpro_version', '1.1.1' );
+    update_option( 'idpay_pmpro_version', '1.2.0' );
 }
 
 add_action('init', 'idpay_pmpro_load_textdomain');
@@ -291,9 +291,11 @@ function load_idpay_pmpro_class()
              * Instead of change membership levels, send users to IDPay to pay.
              *
              * @since 1.8
+             *
              */
             public static function pmpro_checkout_before_change_membership_level($user_id, $morder)
             {
+                /* @var $morder MemberOrder */
                 global $wpdb, $discount_code_id;
 
                 //if no order, no need to pay
@@ -367,6 +369,9 @@ function load_idpay_pmpro_class()
                     $morder->notes  = sprintf(__('An pending occurred while creating a transaction. pendding status: %s', 'idpay-paid-memberships-pro'), $http_status);
                     $morder->saveOrder();
 
+                    // save Transaction ID to Order Meta
+                    add_pmpro_membership_order_meta($morder->id,'IdpayTransactionId',$result->id,true);
+                    // redirect to IPG
                     wp_redirect($result->link);
                     exit;
                 } else {
@@ -411,7 +416,7 @@ function load_idpay_pmpro_class()
                     exit;
                 }
 
-                if ($status == 10) {
+                if ($status == 10 && self::isNotDoubleSpending($order_id,$morder->id,$id)) {
                     $gtw_env = pmpro_getOption('gateway_environment');
                     $api_key = pmpro_getOption('idpay_api_key');
 
@@ -504,6 +509,15 @@ function load_idpay_pmpro_class()
                     wp_redirect($redirect);
                     exit;
                 }
+            }
+
+            public static function isNotDoubleSpending($reference, $order_id, $transaction_id)
+            {
+                $relatedTransaction = get_pmpro_membership_order_meta($order_id, 'IdpayTransactionId', true);
+                if (!empty($relatedTransaction)) {
+                    return $transaction_id == $relatedTransaction;
+                }
+                return false;
             }
 
             public static function do_level_up(&$morder, $txn_id)
