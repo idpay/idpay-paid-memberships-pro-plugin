@@ -1,33 +1,32 @@
-=== IDPay Payment Gateway for Paid Memberships Pro ===
-Contributors: imikiani, meysamrazmi, vispa,MimDeveloper.Tv (Mohammad-Malek)
+=== Title & Descriptions ===
+
+title : IDPay For Paid Memberships Pro
 Tags: IDPay, gateway, paid memberships pro, memberships, restrict content
-Stable tag: 1.2.0
-Tested up to: 6.0.2
+Stable tag: 1.2.1
+Tested up to: 6.1
+Contributors: MimDeveloper.Tv (Mohammad-Malek), imikiani, meysamrazmi, vispa
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-[IDPay](https://idpay.ir) payment method for [Paid Memberships Pro](https://wordpress.org/plugins/paid-memberships-pro/).
-
 == Description ==
 
-IDPay is one of the Financial Technology providers in Iran and provides some payment services. After installing and enabling this plugin, you can sale your memberships by IDPay payment gateway.
+After installing and enabling this plugin, your customers can pay through IDPay gateway.
+For doing a transaction through IDPay gateway, you must have an API Key. You can obtain the API Key by going to your [dashboard](https://idpay.ir/dashboard/web-services) in your IDPay [account](https://idpay.ir/user).
 
 == Installation ==
 
-After creating a [web service](https://idpay.ir/dashboard/web-services) on https://idpay.ir and getting an API Key, follow this instruction:
-
+0 After creating a Web Service on https://idpay.ir and getting an API Key, follow this instruction:
 1. Activate plugin IDPay for Paid Memberships Pro.
 2. Go to Memberships > Settings > Payment Gateway & SSL.
 3. In the Payment Gateway section, choose IDPay.
 5. Enter the API Key.
 
-If you need to use this plugin in Test mode, select  "Sandbox/Testing" in the Gateway Environment.
-
-Also there is a complete documentation [here](https://blog.idpay.ir/helps/168) which helps you to install the plugin step by step.
-
-Thank you so much for using IDPay Payment Gateway.
+* If you need to use this plugin in Test mode, Select the "Sandbox" checkbox.
 
 == Changelog ==
+
+== 1.2.1, Nov 13, 2022 ==
+* Tested Up With Wordpress 6.1 And Paid Memberships Pro Plugin 2.9.5
 
 = 1.2.0, June 18, 2022 =
 * First Official Release
@@ -56,4 +55,4 @@ Thank you so much for using IDPay Payment Gateway.
 * Update Plugin header.
 
 = 1.0, May 05, 2019 =
-* First release.
+* Develope release
